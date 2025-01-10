@@ -1,0 +1,73 @@
+name: Verify docs
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+
+jobs:
+  use:
+    name: Configuration reference
+    runs-on: Ubuntu-20.04
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Set up PHP
+        uses: shivammathur/setup-php@2.7.0
+        with:
+          php-version: 7.4
+          coverage: none
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-7.4-${{ hashFiles('composer.*') }}
+          restore-keys: |
+            composer-${{ runner.os }}-7.4-
+            composer-${{ runner.os }}-
+            composer-
+
+      - name: Checkout Symfony repo
+        run: composer create-project --stability dev symfony/website-skeleton .github/workflows/docs-configuration-reference/symfony
+
+      - name: Checkout Symfony Docs repo
+        run: git clone https://github.com/symfony/symfony-docs .github/workflows/docs-configuration-reference/docs
+
+      - name: Download dependencies
+        run: composer install --no-interaction --optimize-autoloader
+
+      - name: Verify docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.CARSONPROD_GITHUB_TOKEN }}
+        run: |
+          CURRENT_DIR=$(pwd)
+          for item in "debug:DebugBundle" "framework:FrameworkBundle" "security:SecurityBundle" "twig:TwigBundle" "web_profiler:WebProfilerBundle"
+          do
+            FILE=$(echo $item | cut -d ":" -f1)
+            BUNDLE=$(echo $item | cut -d ":" -f2)
+            echo ::group::$BUNDLE
+
+            echo "Trying to find missing config keys"
+            cd .github/workflows/docs-configuration-reference
+            ./run.php `pwd`/symfony `pwd`/docs/reference/configuration/$FILE.rst $BUNDLE > $CURRENT_DIR/output.txt
+
+            cd $CURRENT_DIR
+            cat output.txt
+
+            if [ -s ./output.txt ]; then
+              echo "Creating an issue"
+              echo -e "I found that there are some configuration missing for the $BUNDLE configuration reference page. This is a list of what is missing: \n\n\`\`\`" > issue.txt
+              cat ./output.txt >> issue.txt
+              echo -e "\n\`\`\`\n\nCould someone please add these?" >> issue.txt
+              bin/console app:issue:open symfony/symfony-docs "[$BUNDLE] Missing configuration reference" `pwd`/issue.txt
+            fi
+            echo ::endgroup::
+          done
