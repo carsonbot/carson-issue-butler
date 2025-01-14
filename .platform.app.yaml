@@ -61,5 +61,9 @@ crons:
         spec: '28 12 * * *'
         cmd: croncape bin/console app:issue:ping-stale symfony/webpack-encore --not-updated-for 6months
 
+    stale_issues_webpack_encore_bundle:
+        spec: '18 12 * * *'
+        cmd: croncape bin/console app:issue:ping-stale symfony/webpack-encore-bundle --not-updated-for 6months
+
 relationships:
     database: "mydatabase:postgresql"

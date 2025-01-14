@@ -88,6 +88,19 @@ parameters:
                 - 'App\Subscriber\AllowEditFromMaintainerSubscriber'
             secret: '%env(SYMFONY_WEBPACK_ENCORE_SECRET)%'
 
+        symfony/webpack-encore-bundle:
+            subscribers:
+                - 'App\Subscriber\AutoLabelFromContentSubscriber'
+                - 'App\Subscriber\StatusChangeByCommentSubscriber'
+                - 'App\Subscriber\StatusChangeOnPushSubscriber'
+                - 'App\Subscriber\StatusChangeByReviewSubscriber'
+                - 'App\Subscriber\NeedsReviewNewPRSubscriber'
+                - 'App\Subscriber\BugLabelNewIssueSubscriber'
+                - 'App\Subscriber\RemoveStalledLabelOnCommentSubscriber'
+                - 'App\Subscriber\RewriteUnwantedPhrasesSubscriber'
+                - 'App\Subscriber\AllowEditFromMaintainerSubscriber'
+            secret: '%env(SYMFONY_WEBPACK_ENCORE_BUNDLE_SECRET)%'
+
 services:
     _defaults:
         autowire: true
